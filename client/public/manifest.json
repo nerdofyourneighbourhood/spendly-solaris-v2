@@ -1,0 +1,60 @@
+{
+  "name": "Spendly Solaris",
+  "short_name": "Solaris",
+  "description": "Neural-powered personal finance tracker with real-time expense monitoring and advanced analytics",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#000000",
+  "theme_color": "#AF52DE",
+  "icons": [
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663494135014/B8FUZREqiUmx9dzPVWNkkF/spendly-pwa-icon-BUQ4dotP4pxzH39pgiZWuP.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663494135014/B8FUZREqiUmx9dzPVWNkkF/spendly-pwa-icon-BUQ4dotP4pxzH39pgiZWuP.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "screenshots": [
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663494135014/B8FUZREqiUmx9dzPVWNkkF/spendly-hero-dashboard-GpRWsyxJu2MaHjBxiEGwKE.png",
+      "sizes": "1536x1024",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "View Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your spending dashboard",
+      "url": "/?tab=dashboard",
+      "icons": [
+        {
+          "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663494135014/B8FUZREqiUmx9dzPVWNkkF/spendly-pwa-icon-BUQ4dotP4pxzH39pgiZWuP.png",
+          "sizes": "512x512"
+        }
+      ]
+    },
+    {
+      "name": "View Analytics",
+      "short_name": "Analytics",
+      "description": "View spending trends and analytics",
+      "url": "/?tab=trends",
+      "icons": [
+        {
+          "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663494135014/B8FUZREqiUmx9dzPVWNkkF/spendly-pwa-icon-BUQ4dotP4pxzH39pgiZWuP.png",
+          "sizes": "512x512"
+        }
+      ]
+    }
+  ]
+}
