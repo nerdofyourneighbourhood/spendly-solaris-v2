@@ -14,7 +14,6 @@ export interface Expense {
   category: 'food' | 'shopping' | 'transport' | 'entertainment' | 'bills';
   date: string;
 }
-
 export const CATEGORIES = [
   { id: 'food', label: 'Dining', icon: 'Utensils', color: '#FF375F' },
   { id: 'shopping', label: 'Retail', icon: 'ShoppingBag', color: '#AF52DE' },
@@ -60,6 +59,7 @@ function AppContent() {
     }, 1200);
   };
 
+  // make sure to consider if you need authentication for certain routes
   return (
     <div className="min-h-screen flex flex-col bg-black overflow-hidden">
       {/* Header */}
@@ -86,7 +86,7 @@ function AppContent() {
       {/* Content Scroll Area */}
       <main className="flex-1 overflow-y-auto px-6 pt-4 pb-32">
         {tab === 'dashboard' && (
-          <Dashboard expenses={expenses} total={total} />
+          <Dashboard />
         )}
         {tab === 'trends' && (
           <Trends expenses={expenses} />
