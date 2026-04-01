@@ -1,27 +1,1311 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Spendly · Solaris</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── RESET & BASE ─────────────────────────────────────────── */
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Solaris" />
-    <meta name="theme-color" content="#AF52DE" />
-    <meta name="description" content="Neural-powered personal finance tracker with real-time expense monitoring" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" href="https://d2xsxph8kpxj0f.cloudfront.net/310519663494135014/B8FUZREqiUmx9dzPVWNkkF/spendly-pwa-icon-BUQ4dotP4pxzH39pgiZWuP.png" />
-    <link rel="apple-touch-icon" href="https://d2xsxph8kpxj0f.cloudfront.net/310519663494135014/B8FUZREqiUmx9dzPVWNkkF/spendly-pwa-icon-BUQ4dotP4pxzH39pgiZWuP.png" />
-    <title>Spendly Solaris</title>
-  </head>
+  :root {
+    --bg:        #080808;
+    --surface:   #111111;
+    --surface2:  #191919;
+    --border:    rgba(255,255,255,0.07);
+    --border2:   rgba(255,255,255,0.12);
+    --text:      #f0f0f0;
+    --text2:     #888;
+    --text3:     #444;
+    --accent:    #7B61FF;
+    --accent2:   #A78BFA;
+    --green:     #2DD4A0;
+    --red:       #FF4D6D;
+    --orange:    #FF9F43;
+    --blue:      #4CC9F0;
+    --pink:      #F72585;
+    --radius:    20px;
+    --radius-sm: 12px;
+    --font:      'DM Sans', sans-serif;
+    --mono:      'DM Mono', monospace;
+  }
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <script
-      defer
-      src="%VITE_ANALYTICS_ENDPOINT%/umami"
-      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
-  </body>
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
 
+  /* ── LAYOUT ───────────────────────────────────────────────── */
+  #app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .header {
+    padding: 52px 24px 16px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .logo { font-size: 2rem; font-weight: 900; letter-spacing: -1.5px; color: var(--text); }
+  .logo span { color: var(--accent2); }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    padding: 6px 12px;
+    border-radius: 40px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text2);
+    text-transform: uppercase;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    transition: all 0.3s;
+  }
+  .status-dot.syncing {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 1s infinite;
+  }
+
+  /* scrollable content */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 20px 120px;
+    scrollbar-width: none;
+  }
+  .content::-webkit-scrollbar { display: none; }
+
+  /* ── TAB BAR ──────────────────────────────────────────────── */
+  .tabbar {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    height: 88px;
+    background: rgba(8,8,8,0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: 12px;
+    z-index: 100;
+  }
+  .tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text3);
+    transition: color 0.2s;
+    font-family: var(--font);
+    padding: 8px 0;
+  }
+  .tab-btn.active { color: var(--accent2); }
+  .tab-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+  .tab-label { font-size: 9px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  /* ── PAGES ────────────────────────────────────────────────── */
+  .page { display: none; animation: fadeUp 0.3s ease; }
+  .page.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0);    }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── CARDS ────────────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title svg { width: 14px; height: 14px; }
+
+  /* ── PULSE PAGE ───────────────────────────────────────────── */
+  .total-hero {
+    background: linear-gradient(135deg, #13002E 0%, #0A001F 100%);
+    border: 1px solid rgba(123,97,255,0.3);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .total-hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(123,97,255,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .total-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent2); text-transform: uppercase; margin-bottom: 6px; }
+  .total-amount { font-size: 3rem; font-weight: 900; letter-spacing: -2px; color: var(--text); line-height: 1; }
+  .total-amount .currency { font-size: 1.4rem; font-weight: 600; color: var(--accent2); vertical-align: super; margin-right: 2px; }
+  .total-sub { font-size: 12px; color: var(--text2); margin-top: 8px; }
+  .total-sub strong { color: var(--text); }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .metric-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-tile::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--tile-color, var(--accent));
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    transform: scaleX(var(--tile-pct, 0));
+    transform-origin: left;
+    transition: transform 0.6s cubic-bezier(0.4,0,0.2,1);
+  }
+  .metric-icon { font-size: 20px; margin-bottom: 8px; }
+  .metric-name { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+  .metric-val  { font-size: 1.6rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; margin: 2px 0; }
+  .metric-target { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+
+  /* transactions list */
+  .tx-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tx-item:last-child { border-bottom: none; }
+  .tx-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-right: 12px;
+  }
+  .tx-left { display: flex; align-items: center; flex: 1; min-width: 0; }
+  .tx-info { min-width: 0; }
+  .tx-merchant { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-meta    { font-size: 11px; color: var(--text2); margin-top: 1px; text-transform: capitalize; }
+  .tx-amount  { font-weight: 800; font-size: 14px; color: var(--red); font-family: var(--mono); flex-shrink: 0; margin-left: 12px; }
+  .tx-delete  { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px 4px 4px 12px; font-size: 16px; transition: color 0.2s; flex-shrink: 0; }
+  .tx-delete:hover { color: var(--red); }
+  .empty-state { text-align: center; color: var(--text3); padding: 32px 16px; font-size: 13px; line-height: 1.6; }
+
+  /* ── VOLUME PAGE (charts) ─────────────────────────────────── */
+  .chart-wrap { position: relative; height: 220px; width: 100%; }
+  .tab-pills {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    background: var(--surface2);
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .pill-btn {
+    flex: 1;
+    padding: 7px;
+    border: none;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    background: none;
+    color: var(--text3);
+    font-family: var(--font);
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+  .pill-btn.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* category breakdown bars */
+  .cat-row { margin-bottom: 14px; }
+  .cat-row-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+  .cat-row-name { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .cat-amount { font-weight: 700; font-family: var(--mono); font-size: 13px; }
+  .cat-bar-bg { height: 4px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .cat-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+
+  /* insights */
+  .insight-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text2);
+  }
+  .insight-row:last-child { border-bottom: none; }
+  .insight-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── BRIDGE PAGE (sync) ───────────────────────────────────── */
+  .quick-btn {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 8px;
+    font-family: var(--font);
+  }
+  .quick-btn:hover, .quick-btn:active { background: rgba(123,97,255,0.1); border-color: rgba(123,97,255,0.3); }
+  .quick-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .quick-btn-left { display: flex; align-items: center; gap: 12px; }
+  .quick-btn-emoji { font-size: 22px; }
+  .quick-btn-label { font-weight: 700; font-size: 14px; color: var(--text); }
+  .quick-btn-sub   { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .quick-btn-arrow { color: var(--text3); font-size: 18px; }
+
+  /* manual form */
+  .form-field {
+    margin-bottom: 10px;
+  }
+  .form-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; display: block; }
+  .form-input, .form-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 14px;
+    font-family: var(--font);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--text3); }
+  .form-row { display: flex; gap: 8px; }
+  .form-row .form-field { flex: 1; }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 800;
+    font-family: var(--font);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.02em;
+  }
+  .btn-primary:hover   { background: #6B4FF0; }
+  .btn-primary:active  { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* sync log */
+  .sync-log-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .sync-log-item:last-child { border-bottom: none; }
+  .sync-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .sync-status-dot.success { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .sync-status-dot.failed  { background: var(--red);   box-shadow: 0 0 6px var(--red);   }
+  .sync-status-dot.pending { background: var(--orange); animation: pulse 1s infinite; }
+  .sync-log-info { flex: 1; min-width: 0; }
+  .sync-log-label { font-size: 13px; font-weight: 600; text-transform: capitalize; }
+  .sync-log-time  { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 1px; }
+  .sync-log-count { font-size: 11px; color: var(--text2); font-family: var(--mono); flex-shrink: 0; }
+
+  /* toggle switch */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-info .toggle-name { font-size: 14px; font-weight: 600; }
+  .toggle-info .toggle-desc { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .toggle {
+    width: 44px; height: 26px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 13px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .toggle.on { background: var(--accent); border-color: var(--accent); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 20px; height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(18px); }
+
+  /* interval pills */
+  .interval-pills { display: flex; gap: 6px; margin-top: 8px; }
+  .interval-pill {
+    flex: 1;
+    padding: 8px 4px;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    background: none;
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .interval-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* loading skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 8px;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  /* section label */
+  .section-sep {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin: 20px 0 10px;
+    padding-left: 4px;
+  }
+
+  /* toast */
+  #toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 40px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 999;
+    opacity: 0;
+    transition: all 0.3s;
+    white-space: nowrap;
+    pointer-events: none;
+    max-width: 90vw;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  #toast.error   { border-color: var(--red);   color: var(--red);   }
+
+  @media (min-width: 480px) {
+    .tabbar, #app { max-width: 480px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HEADER -->
+  <header class="header">
+    <div>
+      <div class="logo">Spend<span>ly</span></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px;letter-spacing:0.05em;">SOLARIS · UNIFIED</div>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Live</span>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <div class="content" id="content">
+
+    <!-- ══ PULSE PAGE ══════════════════════════════════════════ -->
+    <div class="page active" id="page-pulse">
+
+      <!-- Total spending hero -->
+      <div class="total-hero">
+        <div class="total-label">Total Spent · 30 days</div>
+        <div class="total-amount"><span class="currency">₹</span><span id="heroTotal">0</span></div>
+        <div class="total-sub"><strong id="heroTxCount">0</strong> transactions · <strong id="heroTopCat">—</strong> leads</div>
+      </div>
+
+      <!-- Health metrics -->
+      <div class="section-sep">Health Metrics</div>
+      <div class="metrics-grid" id="metricsGrid">
+        <div class="metric-tile" style="--tile-color:#7B61FF;--tile-pct:0.82">
+          <div class="metric-icon">👟</div>
+          <div class="metric-name">Steps</div>
+          <div class="metric-val" id="mSteps">—</div>
+          <div class="metric-target">/ <span id="mStepsT">10,000</span></div>
+        </div>
+        <div class="metric-tile" style="--tile-color:#FF4D6D;--tile-pct:0.72">
+          <div class="metric-icon">❤️</div>
+          <div class="metric-name">Heart Rate</div>
+          <div class="metric-val" id="mHeart">—</div>
+          <div class="metric-target">/ <span id="mHeartT">100</span> bpm</div>
+        </div>
+        <div class="metric-tile" style="--tile-color:#FF9F43;--tile-pct:0.86">
+          <div class="metric-icon">🔥</div>
+          <div class="metric-name">Calories</div>
+          <div class="metric-val" id="mCal">—</div>
+          <div class="metric-target">/ <span id="mCalT">2,500</span> kcal</div>
+        </div>
+        <div class="metric-tile" style="--tile-color:#2DD4A0;--tile-pct:0.75">
+          <div class="metric-icon">⚡</div>
+          <div class="metric-name">Active Min</div>
+          <div class="metric-val" id="mActive">—</div>
+          <div class="metric-target">/ <span id="mActiveT">60</span> min</div>
+        </div>
+      </div>
+
+      <!-- Recent transactions -->
+      <div class="section-sep">Recent Transactions</div>
+      <div class="card" style="padding:16px 20px;">
+        <div id="txList"><div class="empty-state">No transactions yet.<br>Add one via Bridge ↓</div></div>
+      </div>
+
+    </div><!-- /pulse -->
+
+    <!-- ══ VOLUME PAGE ═════════════════════════════════════════ -->
+    <div class="page" id="page-volume">
+
+      <div class="tab-pills">
+        <button class="pill-btn active" onclick="switchChart('spending')">Spending</button>
+        <button class="pill-btn" onclick="switchChart('trend')">Trend</button>
+        <button class="pill-btn" onclick="switchChart('health')">Health</button>
+      </div>
+
+      <!-- Spending breakdown -->
+      <div id="chart-spending">
+        <div class="card">
+          <div class="card-title">By Category</div>
+          <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+        </div>
+        <div class="card" id="catBreakdown">
+          <div class="card-title">Breakdown</div>
+          <div id="catBars"></div>
+        </div>
+        <div class="card" id="insightCard">
+          <div class="card-title">Insights</div>
+          <div id="insightList"></div>
+        </div>
+      </div>
+
+      <!-- Trend -->
+      <div id="chart-trend" style="display:none">
+        <div class="card">
+          <div class="card-title">Daily Spending · 14 days</div>
+          <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Health -->
+      <div id="chart-health" style="display:none">
+        <div class="card">
+          <div class="card-title">Progress vs Targets</div>
+          <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+        </div>
+      </div>
+
+    </div><!-- /volume -->
+
+    <!-- ══ BRIDGE PAGE ════════════════════════════════════════ -->
+    <div class="page" id="page-bridge">
+
+      <!-- Status bar -->
+      <div class="card" style="display:flex;align-items:center;gap:12px;padding:16px 20px;margin-bottom:12px;">
+        <div class="status-dot" id="bridgeStatusDot" style="width:10px;height:10px;flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;" id="bridgeStatusLabel">Encrypted Link Active</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="bridgeLastSync">No syncs yet</div>
+        </div>
+        <div style="font-size:10px;font-weight:800;color:var(--green);letter-spacing:0.1em;" id="autoSyncBadge">AUTO</div>
+      </div>
+
+      <!-- Quick sync -->
+      <div class="section-sep">Quick Sync</div>
+      <button class="quick-btn" onclick="quickSync('Rapido ride 120')" id="qbRapido">
+        <div class="quick-btn-left">
+          <span class="quick-btn-emoji">🛺</span>
+          <div><div class="quick-btn-label">Rapido Ride</div><div class="quick-btn-sub">rapido ride 120</div></div>
+        </div>
+        <span class="quick-btn-arrow">›</span>
+      </button>
+      <button class="quick-btn" onclick="quickSync('Zomato order 550')" id="qbZomato">
+        <div class="quick-btn-left">
+          <span class="quick-btn-emoji">🍱</span>
+          <div><div class="quick-btn-label">Zomato Order</div><div class="quick-btn-sub">zomato order 550</div></div>
+        </div>
+        <span class="quick-btn-arrow">›</span>
+      </button>
+      <button class="quick-btn" onclick="quickSync('Swiggy order 350')" id="qbSwiggy">
+        <div class="quick-btn-left">
+          <span class="quick-btn-emoji">🛵</span>
+          <div><div class="quick-btn-label">Swiggy Order</div><div class="quick-btn-sub">swiggy order 350</div></div>
+        </div>
+        <span class="quick-btn-arrow">›</span>
+      </button>
+      <button class="quick-btn" onclick="quickSync('Amazon purchase 999')" id="qbAmazon">
+        <div class="quick-btn-left">
+          <span class="quick-btn-emoji">📦</span>
+          <div><div class="quick-btn-label">Amazon</div><div class="quick-btn-sub">amazon purchase 999</div></div>
+        </div>
+        <span class="quick-btn-arrow">›</span>
+      </button>
+
+      <!-- Manual entry -->
+      <div class="section-sep">Manual Entry</div>
+      <div class="card">
+        <div class="form-field">
+          <label class="form-label">Merchant</label>
+          <input class="form-input" id="fMerchant" placeholder="e.g. Starbucks" autocomplete="off">
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">Amount ₹</label>
+            <input class="form-input" id="fAmount" type="number" placeholder="0" step="0.01">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="fCategory">
+              <option value="food">🍱 Dining</option>
+              <option value="transport">🚗 Transit</option>
+              <option value="shopping">🛍 Retail</option>
+              <option value="entertainment">🎬 Leisure</option>
+              <option value="bills">💡 Fixed</option>
+              <option value="health">❤️ Health</option>
+              <option value="other">📌 Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Note (optional)</label>
+          <input class="form-input" id="fNote" placeholder="Any details...">
+        </div>
+        <button class="btn-primary" id="addTxBtn" onclick="addManualTransaction()">
+          <span>＋</span> Save Transaction
+        </button>
+      </div>
+
+      <!-- Sync history -->
+      <div class="section-sep">Sync History</div>
+      <div class="card" style="padding:16px 20px;">
+        <div id="syncLog"><div class="empty-state">No sync history yet</div></div>
+      </div>
+
+      <!-- Settings -->
+      <div class="section-sep">Settings</div>
+      <div class="card">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-name">Auto Sync</div>
+            <div class="toggle-desc">Automatically sync at intervals</div>
+          </div>
+          <div class="toggle on" id="toggleAutoSync" onclick="togglePref('autoSync')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-name">HealthKit</div>
+            <div class="toggle-desc">Apple Health integration</div>
+          </div>
+          <div class="toggle" id="toggleHealthKit" onclick="togglePref('healthKit')"></div>
+        </div>
+        <div style="padding-top:12px;">
+          <div class="toggle-info" style="margin-bottom:6px;">
+            <div class="toggle-name" style="font-size:13px;">Sync Interval</div>
+          </div>
+          <div class="interval-pills">
+            <button class="interval-pill" onclick="setInterval_(5)"  id="ip5">5m</button>
+            <button class="interval-pill active" onclick="setInterval_(15)" id="ip15">15m</button>
+            <button class="interval-pill" onclick="setInterval_(30)" id="ip30">30m</button>
+            <button class="interval-pill" onclick="setInterval_(60)" id="ip60">60m</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /bridge -->
+
+  </div><!-- /content -->
+
+  <!-- TAB BAR -->
+  <nav class="tabbar">
+    <button class="tab-btn active" id="tab-pulse" onclick="switchTab('pulse')">
+      <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      <span class="tab-label">Pulse</span>
+    </button>
+    <button class="tab-btn" id="tab-volume" onclick="switchTab('volume')">
+      <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <span class="tab-label">Volume</span>
+    </button>
+    <button class="tab-btn" id="tab-bridge" onclick="switchTab('bridge')">
+      <svg viewBox="0 0 24 24" id="bridgeIcon"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      <span class="tab-label">Bridge</span>
+    </button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// API CONFIG — swap this section when backend is deployed
+// ═══════════════════════════════════════════════════════════════
+const API_CONFIG = {
+  enabled: false,          // ← set true when backend is live
+  baseUrl: '',             // ← e.g. 'https://your-app.manus.app'
+  // When enabled, all data reads/writes go to the real API
+  // When false, everything uses localStorage
+};
+
+// ═══════════════════════════════════════════════════════════════
+// STORAGE LAYER — works with localStorage now, API later
+// ═══════════════════════════════════════════════════════════════
+const KEY = {
+  TX:      'sol_transactions',
+  HEALTH:  'sol_health',
+  SYNC:    'sol_synclog',
+  PREFS:   'sol_prefs',
+};
+
+function load(key, def) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; }
+  catch { return def; }
+}
+function save(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let transactions = load(KEY.TX, []);
+let healthMetrics = load(KEY.HEALTH, {
+  steps:         { current: 8234,  target: 10000 },
+  heartRate:     { current: 72,    target: 100   },
+  calories:      { current: 2150,  target: 2500  },
+  activeMinutes: { current: 45,    target: 60    },
+});
+let syncLogs = load(KEY.SYNC, []);
+let prefs = load(KEY.PREFS, {
+  autoSync: true,
+  healthKit: false,
+  interval: 15,
+});
+
+let isSyncing = false;
+let pieChart = null, lineChart = null, barChart = null;
+let currentChartTab = 'spending';
+let currentTab = 'pulse';
+
+// Category config
+const CATS = {
+  food:          { color: '#FF4D6D', label: 'Dining'  },
+  transport:     { color: '#5E5CE6', label: 'Transit' },
+  shopping:      { color: '#AF52DE', label: 'Retail'  },
+  entertainment: { color: '#FF9F43', label: 'Leisure' },
+  bills:         { color: '#2DD4A0', label: 'Fixed'   },
+  health:        { color: '#4CC9F0', label: 'Health'  },
+  other:         { color: '#888',    label: 'Other'   },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  currentTab = tab;
+  if (tab === 'volume') renderCharts();
+  if (tab === 'bridge') renderSyncLog();
+  document.getElementById('content').scrollTop = 0;
+  if (window.navigator.vibrate) window.navigator.vibrate(8);
+}
+
+function switchChart(type) {
+  currentChartTab = type;
+  document.querySelectorAll('.pill-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['spending','trend','health'][i] === type);
+  });
+  document.getElementById('chart-spending').style.display = type === 'spending' ? '' : 'none';
+  document.getElementById('chart-trend').style.display    = type === 'trend'    ? '' : 'none';
+  document.getElementById('chart-health').style.display   = type === 'health'   ? '' : 'none';
+  renderCharts();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMPUTED DATA
+// ═══════════════════════════════════════════════════════════════
+function getTotal(days = 30) {
+  const cutoff = Date.now() - days * 864e5;
+  return transactions
+    .filter(t => new Date(t.date).getTime() > cutoff)
+    .reduce((s, t) => s + t.amount, 0);
+}
+
+function getCategorySummary(days = 30) {
+  const cutoff = Date.now() - days * 864e5;
+  const summary = {};
+  transactions
+    .filter(t => new Date(t.date).getTime() > cutoff)
+    .forEach(t => { summary[t.category] = (summary[t.category] || 0) + t.amount; });
+  return summary;
+}
+
+function getDailyTrend(days = 14) {
+  const result = {};
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    result[d.toLocaleDateString('en-IN', { month:'short', day:'numeric' })] = 0;
+  }
+  const cutoff = Date.now() - days * 864e5;
+  transactions
+    .filter(t => new Date(t.date).getTime() > cutoff)
+    .forEach(t => {
+      const d = new Date(t.date);
+      const key = d.toLocaleDateString('en-IN', { month:'short', day:'numeric' });
+      if (key in result) result[key] += t.amount;
+    });
+  return result;
+}
+
+function getTopCategory() {
+  const s = getCategorySummary();
+  let top = null, max = 0;
+  for (const [k, v] of Object.entries(s)) { if (v > max) { max = v; top = k; } }
+  return top ? CATS[top]?.label ?? top : '—';
+}
+
+function formatRelTime(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER PULSE PAGE
+// ═══════════════════════════════════════════════════════════════
+function renderPulse() {
+  // Hero total
+  const total = getTotal(30);
+  document.getElementById('heroTotal').textContent = total.toLocaleString('en-IN');
+  const recent30 = transactions.filter(t => Date.now() - new Date(t.date).getTime() < 30*864e5);
+  document.getElementById('heroTxCount').textContent = recent30.length;
+  document.getElementById('heroTopCat').textContent = getTopCategory();
+
+  // Health metrics
+  const hm = healthMetrics;
+  document.getElementById('mSteps').textContent  = hm.steps.current.toLocaleString();
+  document.getElementById('mHeart').textContent  = hm.heartRate.current;
+  document.getElementById('mCal').textContent    = hm.calories.current.toLocaleString();
+  document.getElementById('mActive').textContent = hm.activeMinutes.current;
+
+  // Update progress bar CSS vars
+  const tiles = document.querySelectorAll('.metric-tile');
+  const keys = ['steps','heartRate','calories','activeMinutes'];
+  tiles.forEach((tile, i) => {
+    const key = keys[i];
+    const pct = Math.min(1, hm[key].current / hm[key].target);
+    tile.style.setProperty('--tile-pct', pct);
+  });
+
+  // Transactions
+  renderTxList();
+}
+
+function renderTxList() {
+  const container = document.getElementById('txList');
+  const recent = [...transactions].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+  if (!recent.length) {
+    container.innerHTML = '<div class="empty-state">No transactions yet.<br>Add one via Bridge ↓</div>';
+    return;
+  }
+  container.innerHTML = recent.map(tx => `
+    <div class="tx-item">
+      <div class="tx-left">
+        <div class="tx-dot" style="background:${CATS[tx.category]?.color ?? '#888'}"></div>
+        <div class="tx-info">
+          <div class="tx-merchant">${escHtml(tx.merchant)}</div>
+          <div class="tx-meta">${CATS[tx.category]?.label ?? tx.category} · ${formatRelTime(tx.date)}</div>
+        </div>
+      </div>
+      <span class="tx-amount">-₹${parseFloat(tx.amount).toLocaleString('en-IN')}</span>
+      <button class="tx-delete" onclick="deleteTx('${tx.id}')" title="Delete">×</button>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER CHARTS (VOLUME PAGE)
+// ═══════════════════════════════════════════════════════════════
+function renderCharts() {
+  if (currentChartTab === 'spending') renderSpendingCharts();
+  if (currentChartTab === 'trend')    renderTrendChart();
+  if (currentChartTab === 'health')   renderHealthChart();
+}
+
+function renderSpendingCharts() {
+  const summary = getCategorySummary(30);
+  const total   = Object.values(summary).reduce((a,b) => a+b, 0);
+  const sorted  = Object.entries(summary).sort((a,b) => b[1]-a[1]);
+
+  // Pie chart
+  const ctx = document.getElementById('pieChart').getContext('2d');
+  if (pieChart) pieChart.destroy();
+
+  if (!sorted.length) {
+    ctx.clearRect(0,0,400,220);
+    ctx.fillStyle = '#444'; ctx.font = '13px DM Sans'; ctx.textAlign = 'center';
+    ctx.fillText('No spending data yet', 200, 110);
+    document.getElementById('catBars').innerHTML = '<div class="empty-state">Add transactions to see breakdown</div>';
+    document.getElementById('insightList').innerHTML = '';
+    return;
+  }
+
+  pieChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: sorted.map(([k]) => CATS[k]?.label ?? k),
+      datasets: [{
+        data: sorted.map(([,v]) => v),
+        backgroundColor: sorted.map(([k]) => CATS[k]?.color ?? '#888'),
+        borderWidth: 0,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ₹${ctx.parsed.toLocaleString('en-IN')} (${((ctx.parsed/total)*100).toFixed(1)}%)`
+          },
+          bodyFont: { family: 'DM Mono' },
+          backgroundColor: '#191919',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+        }
+      }
+    }
+  });
+
+  // Category bars
+  document.getElementById('catBars').innerHTML = sorted.map(([k, v]) => `
+    <div class="cat-row">
+      <div class="cat-row-top">
+        <span class="cat-row-name">
+          <span class="cat-dot" style="background:${CATS[k]?.color ?? '#888'}"></span>
+          ${CATS[k]?.label ?? k}
+        </span>
+        <span class="cat-amount">₹${v.toLocaleString('en-IN')}</span>
+      </div>
+      <div class="cat-bar-bg">
+        <div class="cat-bar-fill" style="width:${total ? (v/total*100).toFixed(1) : 0}%;background:${CATS[k]?.color ?? '#888'}"></div>
+      </div>
+    </div>
+  `).join('');
+
+  // Insights
+  const insights = generateInsights(sorted, total);
+  document.getElementById('insightList').innerHTML = insights.map(i =>
+    `<div class="insight-row"><span class="insight-icon">${i.icon}</span><span>${i.text}</span></div>`
+  ).join('');
+}
+
+function generateInsights(sorted, total) {
+  const insights = [];
+  if (!sorted.length) return insights;
+  const [topCat, topVal] = sorted[0];
+  const topPct = ((topVal/total)*100).toFixed(0);
+  insights.push({ icon: '📊', text: `<strong>${CATS[topCat]?.label ?? topCat}</strong> is your biggest spend at ${topPct}% of total` });
+
+  const txCount = transactions.filter(t => Date.now() - new Date(t.date) < 30*864e5).length;
+  const avg = txCount > 0 ? (total / txCount).toFixed(0) : 0;
+  insights.push({ icon: '💡', text: `Average transaction: <strong>₹${parseInt(avg).toLocaleString('en-IN')}</strong> across ${txCount} entries` });
+
+  const foodAmt = sorted.find(([k]) => k === 'food')?.[1] ?? 0;
+  if (foodAmt > total * 0.4) {
+    insights.push({ icon: '⚠️', text: 'Food spending is over 40% — consider meal planning to reduce costs' });
+  }
+  const billsAmt = sorted.find(([k]) => k === 'bills')?.[1] ?? 0;
+  if (billsAmt > 0) {
+    insights.push({ icon: '✅', text: `Fixed bills tracked: <strong>₹${billsAmt.toLocaleString('en-IN')}</strong> — good visibility on recurring costs` });
+  }
+  return insights;
+}
+
+function renderTrendChart() {
+  const trend = getDailyTrend(14);
+  const ctx = document.getElementById('lineChart').getContext('2d');
+  if (lineChart) lineChart.destroy();
+  lineChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Object.keys(trend),
+      datasets: [{
+        label: 'Daily Spend',
+        data: Object.values(trend),
+        borderColor: '#7B61FF',
+        backgroundColor: 'rgba(123,97,255,0.08)',
+        tension: 0.4, fill: true,
+        pointBackgroundColor: '#7B61FF',
+        pointRadius: 3, pointHoverRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ` ₹${ctx.parsed.y.toLocaleString('en-IN')}` },
+          backgroundColor: '#191919', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+          bodyFont: { family: 'DM Mono' },
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555', font: { family: 'DM Mono', size: 10 }, callback: v => '₹'+v } }
+      }
+    }
+  });
+}
+
+function renderHealthChart() {
+  const hm = healthMetrics;
+  const data = [
+    { name: 'Steps',      current: hm.steps.current,         target: hm.steps.target         },
+    { name: 'Heart Rate', current: hm.heartRate.current,      target: hm.heartRate.target      },
+    { name: 'Calories',   current: hm.calories.current,       target: hm.calories.target       },
+    { name: 'Active Min', current: hm.activeMinutes.current,  target: hm.activeMinutes.target  },
+  ];
+  const ctx = document.getElementById('barChart').getContext('2d');
+  if (barChart) barChart.destroy();
+  barChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.name),
+      datasets: [
+        { label: 'Current', data: data.map(d => d.current), backgroundColor: '#7B61FF', borderRadius: 6 },
+        { label: 'Target',  data: data.map(d => d.target),  backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 6 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#888', font: { size: 11, family: 'DM Sans' }, boxWidth: 12 } },
+        tooltip: { backgroundColor: '#191919', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1 }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#555', font: { size: 11 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TRANSACTIONS
+// ═══════════════════════════════════════════════════════════════
+function addTransaction(merchant, amount, category, note, source) {
+  const tx = {
+    id: Date.now().toString(),
+    merchant: merchant.trim(),
+    amount: parseFloat(amount),
+    category,
+    note: note || '',
+    date: new Date().toISOString(),
+    source: source || 'manual',
+  };
+  transactions.unshift(tx);
+  save(KEY.TX, transactions);
+  return tx;
+}
+
+function deleteTx(id) {
+  transactions = transactions.filter(t => t.id !== id);
+  save(KEY.TX, transactions);
+  renderPulse();
+  showToast('Transaction deleted', 'success');
+}
+
+function addManualTransaction() {
+  const merchant = document.getElementById('fMerchant').value;
+  const amount   = parseFloat(document.getElementById('fAmount').value);
+  const category = document.getElementById('fCategory').value;
+  const note     = document.getElementById('fNote').value;
+
+  if (!merchant.trim()) { showToast('Enter a merchant name', 'error'); return; }
+  if (isNaN(amount) || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
+
+  const tx = addTransaction(merchant, amount, category, note, 'manual');
+  addSyncLog('success', 1, `Manual: ${merchant}`);
+  renderPulse();
+  updateBridgeStatus();
+
+  document.getElementById('fMerchant').value = '';
+  document.getElementById('fAmount').value   = '';
+  document.getElementById('fNote').value     = '';
+
+  showToast(`₹${amount.toLocaleString('en-IN')} saved ✓`, 'success');
+  if (window.navigator.vibrate) window.navigator.vibrate([10, 50, 10]);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QUICK SYNC
+// ═══════════════════════════════════════════════════════════════
+function quickSync(text) {
+  if (isSyncing) return;
+  setSyncing(true);
+
+  const isRapido = /rapido/i.test(text);
+  const isZomato = /zomato/i.test(text);
+  const isSwiggy = /swiggy/i.test(text);
+  const isAmazon = /amazon/i.test(text);
+
+  const merchant = isRapido ? 'Rapido' : isZomato ? 'Zomato' : isSwiggy ? 'Swiggy' : isAmazon ? 'Amazon' : 'Other';
+  const category = isRapido ? 'transport' : (isZomato || isSwiggy) ? 'food' : isAmazon ? 'shopping' : 'other';
+  const amountMatch = text.match(/\d+(\.\d+)?/);
+  const amount = amountMatch ? parseFloat(amountMatch[0]) : (100 + Math.floor(Math.random() * 400));
+
+  setTimeout(() => {
+    addTransaction(merchant, amount, category, `Quick sync: ${text}`, 'quick');
+    addSyncLog('success', 1, `Quick: ${merchant} ₹${amount}`);
+    setSyncing(false);
+    renderPulse();
+    updateBridgeStatus();
+    showToast(`${merchant} ₹${amount.toLocaleString('en-IN')} synced ✓`, 'success');
+    if (window.navigator.vibrate) window.navigator.vibrate([10, 50, 10]);
+  }, 900);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SYNC LOG
+// ═══════════════════════════════════════════════════════════════
+function addSyncLog(status, count, label) {
+  syncLogs.unshift({
+    id: Date.now().toString(),
+    status,
+    count,
+    label: label || '',
+    time: new Date().toISOString(),
+  });
+  if (syncLogs.length > 20) syncLogs = syncLogs.slice(0, 20);
+  save(KEY.SYNC, syncLogs);
+}
+
+function renderSyncLog() {
+  const container = document.getElementById('syncLog');
+  if (!syncLogs.length) {
+    container.innerHTML = '<div class="empty-state">No sync history yet</div>';
+    return;
+  }
+  container.innerHTML = syncLogs.map(log => `
+    <div class="sync-log-item">
+      <div class="sync-status-dot ${log.status}"></div>
+      <div class="sync-log-info">
+        <div class="sync-log-label">${escHtml(log.label || log.status)}</div>
+        <div class="sync-log-time">${formatRelTime(log.time)}</div>
+      </div>
+      <div class="sync-log-count">${log.count > 0 ? log.count + ' item' + (log.count > 1 ? 's' : '') : ''}</div>
+    </div>
+  `).join('');
+
+  updateBridgeStatus();
+}
+
+function updateBridgeStatus() {
+  const last = syncLogs[0];
+  document.getElementById('bridgeLastSync').textContent = last
+    ? `Last sync: ${formatRelTime(last.time)} · ${syncLogs.filter(l => l.status === 'success').length} successful`
+    : 'No syncs yet';
+  document.getElementById('autoSyncBadge').style.display = prefs.autoSync ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SYNCING STATE
+// ═══════════════════════════════════════════════════════════════
+function setSyncing(on) {
+  isSyncing = on;
+  const dot  = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  const bDot = document.getElementById('bridgeStatusDot');
+  const bLbl = document.getElementById('bridgeStatusLabel');
+  const icon = document.getElementById('bridgeIcon');
+
+  dot.classList.toggle('syncing', on);
+  bDot.classList.toggle('syncing', on);
+  text.textContent = on ? 'Syncing...' : 'Live';
+  bLbl.textContent = on ? 'Syncing...' : 'Encrypted Link Active';
+  icon.style.animation = on ? 'spin 1s linear infinite' : '';
+
+  ['qbRapido','qbZomato','qbSwiggy','qbAmazon'].forEach(id => {
+    document.getElementById(id).disabled = on;
+  });
+  document.getElementById('addTxBtn').disabled = on;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SETTINGS / PREFERENCES
+// ═══════════════════════════════════════════════════════════════
+function togglePref(key) {
+  prefs[key] = !prefs[key];
+  save(KEY.PREFS, prefs);
+  document.getElementById('toggleAutoSync').classList.toggle('on', prefs.autoSync);
+  document.getElementById('toggleHealthKit').classList.toggle('on', prefs.healthKit);
+  document.getElementById('autoSyncBadge').style.display = prefs.autoSync ? '' : 'none';
+  showToast(`${key === 'autoSync' ? 'Auto Sync' : 'HealthKit'} ${prefs[key] ? 'enabled' : 'disabled'}`, 'success');
+}
+
+function setInterval_(mins) {
+  prefs.interval = mins;
+  save(KEY.PREFS, prefs);
+  [5,15,30,60].forEach(m => {
+    document.getElementById('ip'+m).classList.toggle('active', m === mins);
+  });
+  showToast(`Sync interval set to ${mins}m`, 'success');
+}
+
+function applyPrefs() {
+  document.getElementById('toggleAutoSync').classList.toggle('on', prefs.autoSync);
+  document.getElementById('toggleHealthKit').classList.toggle('on', prefs.healthKit);
+  document.getElementById('autoSyncBadge').style.display = prefs.autoSync ? '' : 'none';
+  [5,15,30,60].forEach(m => {
+    document.getElementById('ip'+m).classList.toggle('active', m === prefs.interval);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  clearTimeout(toastTimer);
+  el.textContent = msg;
+  el.className = 'show ' + (type || '');
+  toastTimer = setTimeout(() => el.className = '', 2800);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+function init() {
+  applyPrefs();
+  renderPulse();
+  updateBridgeStatus();
+
+  // Auto-refresh every 30s
+  setInterval(() => {
+    if (currentTab === 'pulse') renderPulse();
+  }, 30000);
+}
+
+init();
+</script>
+</body>
 </html>
